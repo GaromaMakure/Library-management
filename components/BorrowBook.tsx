@@ -31,6 +31,7 @@ const BorrowBook = ({
         description: message,
         variant: "destructive",
       });
+      return; // ✅ Prevents continuing if user is not eligible
     }
 
     setBorrowing(true);
@@ -48,14 +49,17 @@ const BorrowBook = ({
       } else {
         toast({
           title: "Error",
-          description: result.error,
+          description: result.error || "Failed to borrow the book",
           variant: "destructive",
         });
       }
-    } catch (error) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: "An error occurred while borrowing the book",
+        description:
+          error instanceof Error
+            ? error.message
+            : "An error occurred while borrowing the book",
         variant: "destructive",
       });
     } finally {
@@ -67,13 +71,14 @@ const BorrowBook = ({
     <Button
       className="book-overview_btn"
       onClick={handleBorrowBook}
-      disabled={borrowing}
+      disabled={borrowing || !isEligible} // ✅ disable if already borrowing OR not eligible
     >
       <Image src="/icons/book.svg" alt="book" width={20} height={20} />
-      <p className="font-bebas-neue text-xl text-dark-100">
+      <span className="font-bebas-neue text-xl text-dark-100">
         {borrowing ? "Borrowing ..." : "Borrow Book"}
-      </p>
+      </span>
     </Button>
   );
 };
+
 export default BorrowBook;
