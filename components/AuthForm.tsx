@@ -41,30 +41,37 @@ const AuthForm = <T extends FieldValues>({
   onSubmit,
 }: Props<T>) => {
   const router = useRouter();
-
   const isSignIn = type === "SIGN_IN";
 
-  const form: UseFormReturn<T> = useForm({
+  const form: UseFormReturn<T> = useForm<T>({
     resolver: zodResolver(schema),
     defaultValues: defaultValues as DefaultValues<T>,
   });
 
   const handleSubmit: SubmitHandler<T> = async (data) => {
-    const result = await onSubmit(data);
+    try {
+      const result = await onSubmit(data);
 
-    if (result.success) {
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: isSignIn
+            ? "You have successfully signed in."
+            : "You have successfully signed up.",
+        });
+        router.push("/");
+      } else {
+        toast({
+          title: `Error ${isSignIn ? "signing in" : "signing up"}`,
+          description: result.error ?? "An unexpected error occurred.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: unknown) {
       toast({
-        title: "Success",
-        description: isSignIn
-          ? "You have successfully signed in."
-          : "You have successfully signed up.",
-      });
-
-      router.push("/");
-    } else {
-      toast({
-        title: `Error ${isSignIn ? "signing in" : "signing up"}`,
-        description: result.error ?? "An error occurred.",
+        title: "Error",
+        description:
+          error instanceof Error ? error.message : "Something went wrong.",
         variant: "destructive",
       });
     }
@@ -77,40 +84,39 @@ const AuthForm = <T extends FieldValues>({
       </h1>
       <p className="text-light-100">
         {isSignIn
-          ? "Access the vast collection of resources, and stay updated"
-          : "Please complete all fields and upload a valid university ID to gain access to the library"}
+          ? "Access the vast collection of resources, and stay updated."
+          : "Please complete all fields and upload a valid university ID to gain access to the library."}
       </p>
+
       <Form {...form}>
         <form
           onSubmit={form.handleSubmit(handleSubmit)}
           className="w-full space-y-6"
         >
-          {Object.keys(defaultValues).map((field) => (
+          {Object.entries(defaultValues).map(([key]) => (
             <FormField
-              key={field}
+              key={key}
               control={form.control}
-              name={field as Path<T>}
+              name={key as Path<T>}
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="capitalize">
-                    {FIELD_NAMES[field.name as keyof typeof FIELD_NAMES]}
+                    {FIELD_NAMES[key as keyof typeof FIELD_NAMES]}
                   </FormLabel>
                   <FormControl>
-                    {field.name === "universityCard" ? (
+                    {key === "universityCard" ? (
                       <FileUpload
                         type="image"
                         accept="image/*"
                         placeholder="Upload your ID"
                         folder="ids"
                         variant="dark"
-                        onFileChange={field.onChange}
+                        onFileChange={(file) => field.onChange(file)}
                       />
                     ) : (
                       <Input
                         required
-                        type={
-                          FIELD_TYPES[field.name as keyof typeof FIELD_TYPES]
-                        }
+                        type={FIELD_TYPES[key as keyof typeof FIELD_TYPES]}
                         {...field}
                         className="form-input"
                       />
@@ -130,7 +136,6 @@ const AuthForm = <T extends FieldValues>({
 
       <p className="text-center text-base font-medium">
         {isSignIn ? "New to BookWise? " : "Already have an account? "}
-
         <Link
           href={isSignIn ? "/sign-up" : "/sign-in"}
           className="font-bold text-primary"
@@ -141,4 +146,5 @@ const AuthForm = <T extends FieldValues>({
     </div>
   );
 };
+
 export default AuthForm;
